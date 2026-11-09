@@ -3,14 +3,8 @@ package me.priyazsh.golink.link;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,10 +24,9 @@ public class ShortLinkService {
     }
 
     @Transactional
-    public ShortLinkCreationResult createShortLink(String originalUrl) {
-        String code = generateUniqueCode();
+    public ShortLink createShortLink(String originalUrl) {
 
-        String recoveryToken = generateRecoveryToken();
+        String code = generateUniqueCode();
 
         ShortLink shortLink = new ShortLink();
         shortLink.setId(UUID.randomUUID());
@@ -42,39 +35,14 @@ public class ShortLinkService {
         shortLink.setCreatedAt(Instant.now());
         shortLink.setActive(true);
         shortLink.setClickCount(0);
-        shortLink.setRecoveryTokenHash(
-                hashRecoveryToken(recoveryToken)
-        );
 
-        ShortLink savedLink = shortLinkRepository.save(shortLink);
-
-        return new ShortLinkCreationResult(
-                savedLink,
-                recoveryToken
-        );
-    }
-
-    @Transactional
-    public Optional<String> resolveAndRecordClick(String code) {
-        Instant now = Instant.now();
-
-        return shortLinkRepository.findByCode(code)
-                .filter(ShortLink::isActive)
-                .filter(link ->
-                        link.getExpiresAt() == null
-                                || link.getExpiresAt().isAfter(now)
-                )
-                .filter(link ->
-                        shortLinkRepository.incrementClickCountIfActive(
-                                code,
-                                now
-                        ) == 1
-                )
-                .map(ShortLink::getOriginalUrl);
+        return shortLinkRepository.save(shortLink);
     }
 
     private String generateUniqueCode() {
+
         for (int attempt = 0; attempt < 5; attempt++) {
+
             StringBuilder code = new StringBuilder(CODE_LENGTH);
 
             for (int i = 0; i < CODE_LENGTH; i++) {
@@ -94,36 +62,21 @@ public class ShortLinkService {
         );
     }
 
-    private String generateRecoveryToken() {
-        byte[] tokenBytes = new byte[32];
-        secureRandom.nextBytes(tokenBytes);
+    @Transactional
+    public java.util.Optional<String> resolveAndRecordClick(String code) {
 
-        return Base64.getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(tokenBytes);
-    }
-
-    public Optional<ShortLink> recoverShortLink(String recoveryToken) {
-        String tokenHash = hashRecoveryToken(recoveryToken);
-
-        return shortLinkRepository.findByRecoveryTokenHash(tokenHash);
-    }
-
-    private String hashRecoveryToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-
-            byte[] hash = digest.digest(
-                    token.getBytes(StandardCharsets.UTF_8)
-            );
-
-            return HexFormat.of().formatHex(hash);
-
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException(
-                    "SHA-256 algorithm is unavailable",
-                    exception
-            );
-        }
+        return shortLinkRepository.findByCode(code)
+                .filter(ShortLink::isActive)
+                .filter(link ->
+                        link.getExpiresAt() == null
+                                || link.getExpiresAt().isAfter(Instant.now())
+                )
+                .filter(link ->
+                        shortLinkRepository.incrementClickCountIfActive(
+                                code,
+                                Instant.now()
+                        ) == 1
+                )
+                .map(ShortLink::getOriginalUrl);
     }
 }

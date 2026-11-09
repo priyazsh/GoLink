@@ -32,9 +32,6 @@ public class ShortLink {
     @Column(name = "click_count", nullable = false)
     private long clickCount;
 
-    @Column(name = "recovery_token_hash", length = 64, unique = true)
-    private String recoveryTokenHash;
-
     protected ShortLink() {
         // Required by JPA
     }
@@ -101,13 +98,5 @@ public class ShortLink {
 
     public void setClickCount(long clickCount) {
         this.clickCount = clickCount;
-    }
-
-    public String getRecoveryTokenHash() {
-        return recoveryTokenHash;
-    }
-
-    public void setRecoveryTokenHash(String recoveryTokenHash) {
-        this.recoveryTokenHash = recoveryTokenHash;
     }
 }

@@ -14,10 +14,7 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(
-                                "/api/v1/links",
-                                "/api/v1/links/recover"
-                        )
+                        .ignoringRequestMatchers("/api/v1/links")
                 )
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()

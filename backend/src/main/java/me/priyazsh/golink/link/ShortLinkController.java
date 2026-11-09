@@ -1,10 +1,7 @@
-
 package me.priyazsh.golink.link;
 
 import jakarta.validation.Valid;
 import me.priyazsh.golink.link.dto.CreateShortLinkRequest;
-import me.priyazsh.golink.link.dto.RecoverShortLinkRequest;
-import me.priyazsh.golink.link.dto.RecoveredShortLinkResponse;
 import me.priyazsh.golink.link.dto.ShortLinkResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -30,40 +27,15 @@ public class ShortLinkController {
     public ShortLinkResponse createShortLink(
             @Valid @RequestBody CreateShortLinkRequest request
     ) {
-        ShortLinkCreationResult result =
+        ShortLink shortLink =
                 shortLinkService.createShortLink(request.url());
-
-        ShortLink shortLink = result.shortLink();
 
         String shortUrl = baseUrl + "/" + shortLink.getCode();
 
         return new ShortLinkResponse(
                 shortLink.getCode(),
                 shortUrl,
-                shortLink.getOriginalUrl(),
-                result.recoveryToken()
-        );
-    }
-
-    @PostMapping("/recover")
-    public RecoveredShortLinkResponse recoverShortLink(
-            @Valid @RequestBody RecoverShortLinkRequest request
-    ) {
-        ShortLink shortLink = shortLinkService
-                .recoverShortLink(request.recoveryToken())
-                .orElseThrow(() ->
-                        new org.springframework.web.server.ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Link not found"
-                        )
-                );
-
-        return new RecoveredShortLinkResponse(
-                shortLink.getCode(),
-                baseUrl + "/" + shortLink.getCode(),
-                shortLink.getOriginalUrl(),
-                shortLink.isActive(),
-                shortLink.getClickCount()
+                shortLink.getOriginalUrl()
         );
     }
 }

@@ -6,9 +6,12 @@ import me.priyazsh.golink.link.dto.CreateShortLinkRequest;
 import me.priyazsh.golink.link.dto.RecoverShortLinkRequest;
 import me.priyazsh.golink.link.dto.RecoveredShortLinkResponse;
 import me.priyazsh.golink.link.dto.ShortLinkResponse;
+import me.priyazsh.golink.link.dto.UpdateShortLinkRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/links")
@@ -35,11 +38,9 @@ public class ShortLinkController {
 
         ShortLink shortLink = result.shortLink();
 
-        String shortUrl = baseUrl + "/" + shortLink.getCode();
-
         return new ShortLinkResponse(
                 shortLink.getCode(),
-                shortUrl,
+                baseUrl + "/" + shortLink.getCode(),
                 shortLink.getOriginalUrl(),
                 result.recoveryToken()
         );
@@ -52,12 +53,47 @@ public class ShortLinkController {
         ShortLink shortLink = shortLinkService
                 .recoverShortLink(request.recoveryToken())
                 .orElseThrow(() ->
-                        new org.springframework.web.server.ResponseStatusException(
+                        new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
                                 "Link not found"
                         )
                 );
 
+        return toRecoveredResponse(shortLink);
+    }
+
+    @PatchMapping("/{code}")
+    public RecoveredShortLinkResponse updateDestination(
+            @PathVariable String code,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @Valid @RequestBody UpdateShortLinkRequest request
+    ) {
+        String recoveryToken = extractRecoveryToken(authorization);
+
+        ShortLink shortLink = shortLinkService.updateDestination(
+                code,
+                recoveryToken,
+                request.url()
+        );
+
+        return toRecoveredResponse(shortLink);
+    }
+
+    private String extractRecoveryToken(String authorization) {
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Bearer token required"
+            );
+        }
+
+        return authorization.substring(7);
+    }
+
+    private RecoveredShortLinkResponse toRecoveredResponse(
+            ShortLink shortLink
+    ) {
         return new RecoveredShortLinkResponse(
                 shortLink.getCode(),
                 baseUrl + "/" + shortLink.getCode(),

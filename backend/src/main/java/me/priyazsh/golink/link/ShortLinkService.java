@@ -109,6 +109,43 @@ public class ShortLinkService {
         return shortLinkRepository.findByRecoveryTokenHash(tokenHash);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ShortLink> findManageableLink(
+            String code,
+            String recoveryToken
+    ) {
+        if (recoveryToken == null
+                || !recoveryToken.matches("^[A-Za-z0-9_-]{43}$")) {
+            return Optional.empty();
+        }
+
+        String tokenHash = hashRecoveryToken(recoveryToken);
+
+        return shortLinkRepository.findByCodeAndRecoveryTokenHash(
+                code,
+                tokenHash
+        );
+    }
+
+    @Transactional
+    public ShortLink updateDestination(
+            String code,
+            String recoveryToken,
+            String newUrl
+    ) {
+        ShortLink shortLink = findManageableLink(code, recoveryToken)
+                .orElseThrow(() ->
+                        new org.springframework.web.server.ResponseStatusException(
+                                org.springframework.http.HttpStatus.NOT_FOUND,
+                                "Link not found"
+                        )
+                );
+
+        shortLink.setOriginalUrl(newUrl);
+
+        return shortLinkRepository.save(shortLink);
+    }
+
     private String hashRecoveryToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

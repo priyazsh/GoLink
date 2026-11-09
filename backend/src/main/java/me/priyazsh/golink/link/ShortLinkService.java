@@ -61,4 +61,22 @@ public class ShortLinkService {
                 "Unable to generate a unique short code. Please try again."
         );
     }
+
+    @Transactional
+    public java.util.Optional<String> resolveAndRecordClick(String code) {
+
+        return shortLinkRepository.findByCode(code)
+                .filter(ShortLink::isActive)
+                .filter(link ->
+                        link.getExpiresAt() == null
+                                || link.getExpiresAt().isAfter(Instant.now())
+                )
+                .filter(link ->
+                        shortLinkRepository.incrementClickCountIfActive(
+                                code,
+                                Instant.now()
+                        ) == 1
+                )
+                .map(ShortLink::getOriginalUrl);
+    }
 }

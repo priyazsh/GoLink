@@ -1,4 +1,3 @@
-
 package me.priyazsh.golink.config;
 
 import org.springframework.context.annotation.Bean;
@@ -14,6 +13,9 @@ public class SecurityConfig {
             throws Exception {
 
         http
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/v1/links")
+                )
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
                 )

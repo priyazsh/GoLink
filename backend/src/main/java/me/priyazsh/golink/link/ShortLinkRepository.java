@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface ShortLinkRepository extends JpaRepository<ShortLink, UUID> {
 
     Optional<ShortLink> findByCode(String code);
-
+    Optional<ShortLink> findByRecoveryTokenHash(String recoveryTokenHash);
     boolean existsByCode(String code);
 
     @Modifying
